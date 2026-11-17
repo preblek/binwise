@@ -1,0 +1,8 @@
+^binwise\.Rproj$
+^\.Rproj\.user$
+^\.gitignore$
+^local$
+^tools$
+^data-raw$
+^Rplots\.pdf$
+^\.DS_Store$
