@@ -1,0 +1,29 @@
+II research case study, aggregate summaries
+
+Author and copyright holder: Keith A. Preble
+APSA Preprints paper: Commercial Embeddedness and Sanctions Busting: Intra-Industry
+Trade, Dependence, and Economic Asymmetry.
+Posted November 16, 2026. DOI: 10.33774/apsa-2026-7wxvk
+https://doi.org/10.33774/apsa-2026-7wxvk
+
+The bundle ii-case-study.rds contains aggregate summaries of the saved research
+replication and additional internal prediction validation completed on
+13 November 2026. It contains no individual country-pair-year records, fitted
+models, row-level predictions, or country identifiers.
+
+Use readRDS() to inspect it. The named list includes metadata and a provenance
+table of original relative file paths and MD5 hashes, followed by aggregate
+tables, including the observed, representative-prediction, and difference
+heatmaps across the three paper GDP grouping rules. No external file needs to be downloaded to read the vignette.
+The development project's data-raw/build_ii_case_study.R records the extraction.
+
+The original category integration check used binwise 0.0.9. The saved validation
+used binwise 0.0.10. The current build rechecks all category assignments using
+the full local replication sample; it does not refit any research model.
+Scores and intervals cannot be reconstructed by fitting models to these cell
+summaries. Full replication requires the research data and recorded environment.
+
+All original estimates, manuscript files, and source datasets are preserved.
+The vignette distinguishes original paper specifications from the subsequent
+continuous comparisons, confidence diagnostics, and internal held-out checks.
+The statistical scope and limitations are documented in the vignette and help.

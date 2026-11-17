@@ -1,0 +1,25 @@
+Package: binwise
+Type: Package
+Title: Diagnose and Compare Binning Choices
+Version: 0.0.17
+Authors@R: person("Keith A.", "Preble", email = "preblek25@ecu.edu", role = c("aut", "cre", "cph"))
+Description: Diagnose numeric variables before categorization. Summarize missing
+    values, exact zeros, percentiles, and candidate bin counts. Preserve ties,
+    identify sparse bins, and optionally treat zero as its own category.
+    Compare quantile, equal-width, and custom schemes with plain-language
+    assessments and plots. Apply saved boundaries to create categorical
+    variables and explore reproducible simulated examples. Compare continuous
+    and binned predictors in linear and binary logistic models, with optional
+    two-variable interactions, common samples, predictions, pointwise confidence
+    intervals, bin support counts, and plain-language model assessments.
+    Validate prediction workflows with shared grouped folds, training-only
+    bin recipes, paired loss comparisons, and optional clustered score intervals.
+    Include natural cubic spline comparators with training-only knots to evaluate
+    categorization against flexible continuous relationships.
+LazyData: true
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1.0)
+Imports: graphics, grDevices, splines, stats, utils
+Suggests: knitr, rmarkdown
+VignetteBuilder: knitr

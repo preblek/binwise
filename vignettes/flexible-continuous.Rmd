@@ -1,0 +1,223 @@
+---
+title: "Compare bins with a flexible continuous model"
+author: "Keith A. Preble"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Compare bins with a flexible continuous model}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE, purl=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 8,
+                     fig.height = 5, out.width = "100%", dpi = 120)
+options(width = 85, digits = 4)
+```
+
+## Why add another model?
+
+Bins can beat a straight line because the relationship is curved. That does
+not establish that categories are the best representation. A useful comparison
+includes a continuous model that can bend while keeping the original measurements.
+
+A **natural cubic spline** fits connected smooth curves. Its **knots** are the
+locations where those curve pieces join. A knot is not a category boundary;
+values on either side remain part of a continuous fitted relationship.
+The curve becomes linear outside its outer boundary knots on the model's link
+scale. In a logistic model that means the log-odds scale, not the probability scale.
+[R spline documentation](https://stat.ethz.ch/R-manual/R-devel/library/splines/html/ns.html).
+
+In `binwise`, adding `spline_df = 3` includes this comparator under the name
+`spline`. Three degrees of freedom is a modest starting amount of flexibility.
+Larger values allow more complex shapes and can overfit. It is not an automatic
+choice of the best complexity. The original `continuous` model remains the
+linear-term reference. For logistic models its terms are linear in log-odds.
+
+Start a fresh R session, load the package, and run these blocks in order. See
+the getting-started guide if you need help running code in RStudio.
+
+```{r load-package}
+library(binwise)
+data("binwise_smooth", package = "binwise")
+```
+
+## 1. Create a curved teaching example
+
+We will reuse the existing exposure values and simulated random noise, but
+change the known expected outcome to a smooth U-shaped relationship.
+The original dataset remains unchanged.
+
+```{r curved-data}
+curved <- binwise_smooth
+noise <- curved$outcome - curved$expected_outcome
+curved$expected_outcome <- 2 + .008 * (curved$exposure - 50)^2
+curved$outcome <- curved$expected_outcome + noise
+plot(curved$exposure, curved$outcome, pch = 16, cex = .4, col = "grey65",
+     xlab = "Exposure", ylab = "Observed outcome")
+```
+
+The outcome tends to be higher near both ends and lower in the middle. The
+`expected_outcome` column is available only because this is a simulation.
+Do not include that teaching aid as a control when predicting the noisy outcome.
+
+## 2. Fit the straight line, spline, and bins
+
+```{r curved-models}
+quartiles <- bin_diagnose(curved, "exposure", bins = 4, warn = FALSE)
+curved_fit <- bin_interact(
+  curved, outcome = "outcome", variables = "exposure",
+  schemes = list(quartiles = quartiles), spline_df = 3
+)
+plot(curved_fit, xlab = "Exposure", main = "A curve can explain why bins beat a line")
+curved_fit$comparison
+```
+
+The legend identifies three models. `continuous` fits a straight line here.
+`spline` can follow the smooth change. `quartiles` fits flat steps that discard
+variation inside each interval. All models use the same observations.
+
+Shading shows 95% pointwise confidence intervals for each fitted mean. It
+conditions on the specified model and complexity; it does not account for
+choosing the preferred degrees of freedom after viewing results. The bands
+are not prediction intervals for individual observations, and their overlap
+is not a test of whether two model shapes are equivalent.
+
+Read the plain-language assessment and inspect the spline definition.
+
+```{r curved-assessment}
+cat(paste(curved_fit$assessment, collapse = "\n\n"))
+curved_fit$spline_details
+```
+
+The assessment now includes each binned scheme's fit comparison with the spline.
+AIC, BIC, and training error still describe the fitted sample. They do not replace
+the held-out comparison below. `spline_details` records interior knots, boundary
+knots, degrees of freedom, and the number of training observations.
+
+## 3. Compare held-out predictions directly against the spline
+
+```{r curved-validation}
+curved_check <- bin_validate(
+  curved, outcome = "outcome", variables = "exposure",
+  schemes = list(quartiles = list(
+    exposure = list(probs = c(0, .25, .5, .75, 1))
+  )),
+  spline_df = 3, reference = "spline", folds = 5, seed = 12, reps = 199
+)
+curved_check$scores
+plot(curved_check, metric = "RMSE",
+     main = "Positive differences mean worse predictions than the spline")
+```
+
+The RMSE values are approximately 6.76 for the straight line, 4.50 for quartile
+bins, and 3.05 for the spline. Lower is better. The bins improve on the straight
+line, but the spline does considerably better than the bins. Here, the useful
+feature is curvature, and categorization loses information about it.
+
+`reference = "spline"` changes which model is subtracted when computing score
+differences. It does not change the fits, folds, or observations scored.
+A negative difference favors a candidate over the spline; a positive one favors
+the spline. The intervals are paired bootstrap intervals for loss differences
+with predictions and folds fixed. They do not cover all uncertainty from
+refitting or model selection. Increase `reps` for a final analysis and check
+interval stability.
+
+The spline knots and quantile boundaries are estimated **only from training
+observations in each fold**. Held-out values reuse the training definitions.
+You can inspect the first fold's stored spline information.
+
+```{r fold-details}
+curved_check$fold_details[[1]]$spline
+curved_check$diagnostics
+```
+
+The spline extends linearly on the link scale beyond its training boundary
+knots. That defines an extrapolation rule; it does not prove that extrapolation
+is accurate. Check coverage, support, and the intended prediction population.
+
+## 4. Do bins still help when there is a real threshold?
+
+The interaction simulation has an outcome whose expected value jumps at zero.
+Within each side of that boundary, changes in `x` do not change the expected
+outcome when `z` and the control are held fixed. That known rule supplies a
+reason to test two categories.
+
+```{r threshold-validation}
+data("binwise_interaction", package = "binwise")
+threshold_check <- bin_validate(
+  binwise_interaction, outcome = "threshold_outcome",
+  variables = c("x", "z"), controls = "control",
+  schemes = list(threshold = list(x = list(breaks = c(-Inf, 0, Inf)))),
+  spline_df = 3, reference = "spline", folds = 5, seed = 12, reps = 199
+)
+threshold_check$scores
+plot(threshold_check, metric = "RMSE", main = "A real jump can favor threshold categories")
+```
+
+Here, RMSE is approximately 1.34 for the linear interaction, 1.28 for the spline,
+and 1.20 for the threshold categories. The bins still help against this more
+flexible comparator. Their advantage follows from this simulated jump; it is
+not a general recommendation to bin all variables at zero.
+
+With two focal variables, `spline_df = 3` applies a spline to **both**. The default
+interaction includes all products of those basis terms plus their main effects.
+This uses 15 focal-predictor terms, plus an intercept and any controls, compared
+with three terms for a linear interaction. With limited observations or joint
+support, that can be too complex. Set `interaction = FALSE` for additive
+splines when that matches your question. The package records fitting failures
+rather than silently reducing complexity. Numeric controls remain linear and
+additive in all candidates.
+
+For a binary outcome, use `model = "logit"`. Predictions are probabilities,
+and validation reports Brier scores and log loss instead of RMSE and MAE.
+Lower remains better. The same spline settings and training-only rules apply.
+
+## 5. Readable boundaries are another candidate, not an automatic decision
+
+R's `pretty()` can suggest round boundaries for a descriptive table or plot.
+They are useful when communication matters. You can already use them through
+`bin_compare()` without installing another package.
+
+```{r pretty-bins}
+round_breaks <- pretty(curved$exposure, n = 4)
+round_comparison <- bin_compare(
+  curved, "exposure", methods = "quantile",
+  custom_breaks = list(round_boundaries = round_breaks)
+)
+round_breaks
+round_comparison$bins[, c("scheme", "bin", "lower", "upper", "n")]
+```
+
+The requested count is approximate, so inspect the actual boundaries and counts.
+In this example, round boundaries give five intervals of width 20. These are
+convenient labels, not known scientific thresholds.
+[R documentation for `pretty()`](https://stat.ethz.ch/R-manual/R-devel/library/base/html/pretty.html).
+
+Do not calculate boundaries from the whole dataset and then describe them as
+training-only. In validation, custom `breaks` mean fixed, prespecified boundaries.
+A rule that learns `pretty()` or clustering boundaries from data must be fitted
+inside each training fold, currently through a `fit_predict` callback. Built-in
+recipes currently learn quantiles; they do not learn clustering or pretty breaks.
+
+## How to use this comparison responsibly
+
+Choose a small set of plausible schemes and spline complexities before examining
+test performance. Searching many alternatives and reporting the winner on the
+same test observations exaggerates performance. Use nested validation or a fresh
+test set for that selection process.
+
+A single three-degree-of-freedom spline is not every possible continuous model.
+Smooth splines also do not automatically preserve a meaningful zero state or
+model a discontinuity. A zero indicator plus continuous positive intensity may
+be appropriate for another question. Interpretation and prediction are separate
+considerations, and none of these comparisons alone identifies a causal effect.
+
+For repeated observations, supply an appropriate grouping column. For temporal
+prediction, note that these folds fit on all other folds, including later ones;
+this is not forward-only forecasting. Inspect diagnostics before interpreting
+scores calculated on only the rows with predictions available from every model.
+
+The companion real-data guide now includes a spline in the air-quality comparison.
+Open it with `vignette("real-data-and-related-work", package = "binwise")`.

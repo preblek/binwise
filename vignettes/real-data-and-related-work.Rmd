@@ -1,0 +1,318 @@
+---
+title: "Real data, related packages, and research"
+author: "Keith A. Preble"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Real data, related packages, and research}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE, purl=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 8,
+                     fig.height = 5, out.width = "100%", dpi = 120)
+options(width = 85, digits = 4)
+```
+
+## Why use real examples as well as simulations?
+
+Simulations reveal whether a method recovers a rule that we know. Real datasets
+show what happens with rounding, missing observations, uneven distributions,
+and relationships whose true form is unknown. Both are useful tests, with
+different lessons.
+
+Start with the getting-started vignette if you are new to R or `binwise`.
+This companion guide uses three historical datasets supplied with R. No data
+files, accounts, optional data packages, or paper-specific objects are needed.
+The examples execute when this guide is built. They are demonstrations of the
+workflow, not a systematic benchmark or validation of every package feature.
+
+```{r load-package}
+library(binwise)
+```
+
+## 1. Landmass areas and a very long tail
+
+`datasets::islands` contains areas of 48 large landmasses, measured in thousands
+of square miles. It includes continents as well as islands and covers landmasses
+above 10,000 square miles. R's documentation attributes it to the 1975 *World
+Almanac and Book of Facts*. These are historical measurements of a selected set
+of landmasses, not a random sample of all islands.
+[Dataset documentation](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/islands.html).
+
+The original object is a named vector, so first turn it into a data frame.
+
+```{r landmass-data}
+landmasses <- data.frame(
+  landmass = names(datasets::islands),
+  area = as.numeric(datasets::islands)
+)
+head(landmasses)
+landmass_comparison <- bin_compare(
+  landmasses, "area", bins = 4, min_count = 2, min_prop = .01
+)
+plot(landmass_comparison, type = "boundaries", show_counts = TRUE,
+     xlab = "Area in thousands of square miles",
+     main = "Very different landmasses can share a quantile bin",
+     scheme_labels = c(quantile_4 = "Four quantile bins",
+                       equal_width_4 = "Four equal-width bins"))
+landmass_comparison$bins[, c("scheme", "bin", "lower", "upper", "n")]
+```
+
+With only 48 observations, this descriptive example uses a count screen of two,
+not the package default of 20. That does not make two observations adequate for
+statistical inference. It simply makes the chosen warning rule explicit.
+
+**Look for** the broad upper quantile interval and the imbalance of equal-width
+counts. Quantiles can balance counts while grouping very different areas.
+Equal widths can preserve absolute size distinctions but leave small groups.
+A log-scale display is another way to inspect the distribution while retaining
+the numeric measurements.
+
+**Conclusion.** This reproduces the long-tail problem in real data. With no
+outcome in this example, it cannot tell us whether bins improve prediction.
+
+## 2. Geyser durations and apparent clusters
+
+`datasets::faithful` contains 272 observations of eruption duration and waiting
+time until the next eruption at Old Faithful. Both are measured in minutes.
+The R documentation notes substantial rounding of eruption times and the
+existence of other versions of these data. Use this version consistently when
+reproducing the example.
+[Dataset documentation](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/faithful.html).
+
+```{r geyser-scatter}
+geyser <- datasets::faithful
+plot(geyser$eruptions, geyser$waiting, pch = 16, col = "#397985",
+     xlab = "Eruption duration in minutes",
+     ylab = "Waiting time to the next eruption in minutes")
+```
+
+The plot suggests shorter and longer eruptions. For an exploratory descriptive
+summary, compare quartiles with a three-minute boundary.
+
+```{r geyser-bins}
+geyser_comparison <- bin_compare(
+  geyser, "eruptions", methods = "quantile",
+  custom_breaks = list(three_minutes = c(min(geyser$eruptions), 3,
+                                        max(geyser$eruptions)))
+)
+plot(geyser_comparison, type = "boundaries", show_counts = TRUE,
+     xlab = "Eruption duration in minutes", main = "Describing short and long eruptions",
+     scheme_labels = c(quantile_4 = "Four quantile bins",
+                       three_minutes = "Exploratory three-minute boundary"))
+geyser_groups <- bin_apply(
+  geyser, geyser_comparison$diagnoses$three_minutes, name = "duration_group"
+)
+table(geyser_groups$duration_group)
+```
+
+**Conclusion.** A short/long summary can be useful for communication, but three
+minutes here is an exploratory choice. We have not established a physical
+threshold or that waiting time is constant within each category. Clusters in a
+predictor are not enough to establish a step-shaped outcome relationship.
+Rounding also creates ties that should stay together.
+
+These are observations of one geyser over time. A random row split would not
+by itself establish performance for future eruptions. This section deliberately
+makes a descriptive claim only.
+
+## 3. Air quality, missing values, and held-out months
+
+`datasets::airquality` contains 153 daily observations from New York between
+May and September 1973. Ozone is measured in parts per billion, temperature in
+degrees Fahrenheit, wind in miles per hour, and solar radiation in Langleys.
+The original sources are the New York State Department of Conservation and
+the National Weather Service.
+[Dataset documentation](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/airquality.html).
+
+We will predict ozone from temperature, wind, and solar radiation. Only the
+representation of temperature changes between models. We compare a linear
+temperature term, a natural cubic spline, and quartile categories.
+
+```{r air-missingness}
+air <- datasets::airquality
+needed <- c("Ozone", "Temp", "Wind", "Solar.R")
+colSums(is.na(air[, needed]))
+sum(complete.cases(air[, needed]))
+```
+
+There are 111 complete observations for this comparison. The remaining 42
+rows are excluded because at least one required measurement is missing.
+Complete-case evaluation can describe a selected subset; this example does
+not solve the missing-data problem.
+
+Keep all observations from a month together and leave one month out at a time.
+The models train on the other four months. The quartile cutpoints are learned
+using training observations only, including when a held-out temperature is
+outside the training range. Automatic quantile recipes extend their outermost
+intervals to cover such values; their internal cutpoints stay training-derived.
+
+```{r air-validation}
+air_check <- bin_validate(
+  air, outcome = "Ozone", variables = "Temp",
+  controls = c("Wind", "Solar.R"),
+  schemes = list(quartiles = list(Temp = list(probs = c(0, .25, .5, .75, 1)))),
+  group = "Month", folds = 5, seed = 12, reps = 0,
+  spline_df = 3, reference = "spline"
+)
+air_check$scores
+air_check$diagnostics
+```
+
+`reps = 0` omits bootstrap intervals. With only five month groups, this small
+example is not a good setting for presenting cluster-bootstrap intervals as
+precise evidence. `NA` in the interval columns means no interval was calculated.
+All eligible test observations receive predictions from all three models.
+
+The pooled RMSE is about 23.54 ppb for the linear temperature model,
+21.44 ppb for temperature quartiles, and 21.05 ppb for the spline. The MAE
+values are about 17.73, 15.84, and 14.66 ppb, respectively. Lower is better.
+Quartiles improve on a linear temperature term, but the spline gives the lowest
+pooled errors among these candidates. Check each held-out fold as well.
+
+```{r air-folds}
+air_check$fold_scores[air_check$fold_scores$metric == "RMSE", c("fold", "model", "n", "score")]
+```
+
+Quartiles have lower RMSE in each of the five held-out months, although the
+size of improvement varies. Categories can improve
+on a simple linear predictor on real observations while a flexible continuous
+alternative does better overall. The spline need not win every individual fold.
+This small comparison does not establish a stable performance ranking in new
+settings.
+
+**Limits of that conclusion.** There are just five months from one historical
+summer, some observations are missing, and days may remain dependent across
+month boundaries. Training includes months later than the held-out month, so
+this is not a test of forecasting future months using only the past.
+It is also not evidence that temperature categories cause ozone changes.
+The included spline supplies one flexible continuous comparator. Its complexity
+was specified in advance and its knots learned within each training fold.
+A better score than a straight line does not identify a uniquely correct set
+of thresholds.
+
+## Related tools have different primary purposes
+
+This is a targeted review of official documentation and primary research,
+checked on 13 November 2026. It is not an exhaustive review or a performance
+benchmark. These are adjacent tools with some shared techniques, not a list
+of interchangeable packages. Software capabilities change.
+
+| Tool | Established capability | Relationship to binwise |
+|:--|:--|:--|
+| [Base R `cut()`](https://stat.ethz.ch/R-manual/R-devel/library/base/html/cut.html) | Assigns numeric values to intervals and returns categories. | Basic bin creation is already available. `bin_apply()` connects assignment to saved diagnostic schemes. |
+| [`dlookr`](https://CRAN.R-project.org/package=dlookr) | Data diagnosis, exploration, transformations, binning, and automated reports. | Shared diagnostic and binning features within a broader exploration package. binwise organizes these steps around evaluating a categorization decision. |
+| [`rbin`](https://CRAN.R-project.org/package=rbin) | Manual, quantile, equal-length, and other binning tools, with category creation and interactive add-ins. | An established alternative for constructing and inspecting bins. |
+| [`interflex`](https://yiqingxu.org/packages/interflex/) | Estimates and diagnoses conditional marginal effects, with binning, kernel, linear, and other flexible estimators. | Uses bins to diagnose conditional effects across a moderator. binwise evaluates the consequences of replacing numeric predictors with categories, including comparisons without interactions. |
+| [`binsreg`](https://github.com/nppackages/binsreg) | Binscatter regression, inference, plotting, bin-number selection, and specification tests. | Related estimation methodology, rather than a direct substitute for this decision workflow. Partitions support curve estimation and inference, including variation within bins. |
+| [`cutpointr`](https://www.jstatsoft.org/article/view/v098i11) | Estimates cutpoints for binary classification and evaluates stability and out-of-sample performance. | Demonstrates that choosing and validating cutpoints is established work. It targets a more specific classification problem. |
+
+In particular, the classic `interflex` binning diagnostic estimates conditional
+marginal effects and allows within-bin moderator terms. It is not merely a table
+of outcome averages. `binsreg` estimates unknown relationships using partitions
+and formal inference. Choosing partitions for curve estimation answers a
+different question from choosing substantive categories for a variable.
+[interflex binning diagnostic](https://yiqingxu.org/packages/interflex/02_classic.html),
+[binsreg reference](https://CRAN.R-project.org/package=binsreg).
+
+None of these packages is required to run this guide. They should be acknowledged
+and considered when their methods better match a user's research question.
+The comparison above describes scope, not superiority. `binwise` currently fits
+ordinary linear and binary logistic models, optionally with natural cubic
+spline terms, in `bin_interact()`. It does not
+supply the specialized estimators of these packages. Advanced callbacks in
+`bin_validate()` let users bring their own fitting procedure.
+
+## Where to go next
+
+Choose a tool by the question you need to answer. These packages can complement
+`binwise`; this guide does not claim that it reproduces their methods.
+
+| If you need to... | Consider | What goes beyond the current binwise interface |
+|:--|:--|:--|
+| Diagnose a whole dataset, investigate missing values or outliers, and compare transformations | [dlookr](https://CRAN.R-project.org/package=dlookr) | Broad exploration, transformation, and automated reporting. |
+| Estimate how a treatment's marginal effect varies across a moderator and diagnose interaction assumptions | [interflex](https://yiqingxu.org/packages/interflex/) | Specialized conditional-effect estimators and inference, including support diagnostics. |
+| Estimate regression curves with binscatter, construct uniform confidence bands, or test shape restrictions | [binsreg](https://github.com/nppackages/binsreg) | Formal binscatter estimation, inference, and partition selection. binwise's plotted bands are pointwise model-based mean intervals. |
+| Estimate and validate a cutoff for classifying a binary outcome | [cutpointr](https://www.jstatsoft.org/article/view/v098i11) | Classification-specific cutoff optimization, stability assessment, and validation. binwise does not optimize cutpoints against the outcome. |
+| Use weight-of-evidence summaries or interactive bin-construction add-ins | [rbin](https://CRAN.R-project.org/package=rbin) | Tools oriented to constructing and evaluating such binning schemes. |
+
+Read each package's assumptions and documentation before choosing it. None of
+these options removes the need to define the analytical question, preserve honest
+validation, and interpret what the resulting estimates mean. The packages are
+suggested resources here, not dependencies installed automatically by binwise.
+
+## What the research says
+
+**Arbitrary categorization can be costly.** Altman and Royston explain how
+splitting a continuous measurement can discard information, reduce power,
+and obscure differences within groups. They also warn against choosing a
+cutpoint because it yields the most impressive result. This supports retaining
+numeric originals and making the rationale for cutpoints explicit.
+[Altman and Royston (2006), *The cost of dichotomising continuous variables*](https://pmc.ncbi.nlm.nih.gov/articles/PMC1458573/).
+
+**Equal counts do not imply similar outcomes.** Bennette and Vickers show why
+quantile categories can impose implausibly constant risk within broad intervals,
+especially in tails. They advocate flexible continuous relationships and
+meaningful comparisons. They also distinguish exploratory categorization from
+using categories as the principal analysis.
+[Bennette and Vickers (2012), *Against quantiles*](https://pmc.ncbi.nlm.nih.gov/articles/PMC3353173/).
+
+**Binning can help diagnose interaction assumptions.** Hainmueller, Mummolo,
+and Xu examine failures of linear interaction assumptions and inadequate
+common support. Their binning and kernel comparisons help check whether a
+simple interaction is credible in regions with sufficient observations. These
+are diagnostics for a particular statistical question, not a general instruction
+to categorize every continuous variable.
+[Hainmueller, Mummolo, and Xu (2019), *How Much Should We Trust Estimates from Multiplicative Interaction Models?*](https://www.cambridge.org/core/journals/political-analysis/article/how-much-should-we-trust-estimates-from-multiplicative-interaction-models-simple-tools-to-improve-empirical-practice/D8CAACB473F9B1EE256F43B38E458706).
+
+**Bins also support formal nonparametric methods.** Cattaneo, Crump, Farrell,
+and Feng develop statistical foundations for binscatter estimation, inference,
+and choosing the number of bins. This is a distinct use of bins from assuming
+a handful of fixed categories fully describes an outcome relationship.
+The existence of a rigorous binscatter method does not validate arbitrary
+thresholds in a different model.
+[Cattaneo and colleagues (2024), *On Binscatter*](https://nppackages.github.io/references/Cattaneo-Crump-Farrell-Feng_2024_AER.pdf).
+
+**Cutpoint validation is established practice.** Thiele and Hirschfeld explain
+how choosing an apparently optimal classification cutoff can exaggerate
+performance. Their `cutpointr` package includes robust estimation and validation
+methods. Selection and evaluation need to be separated, a principle that also
+motivates training-only bin recipes and honest evaluation in `binwise`.
+[Thiele and Hirschfeld (2021), *cutpointr*](https://www.jstatsoft.org/article/view/v098i11).
+
+## A credible role for binwise
+
+Our assessment is that the potential contribution is an accessible, connected
+workflow for making and documenting a binning decision. That includes plain
+language, counts next to ranges, explicit treatment of meaningful zeros and
+signed values, saved reusable schemes, and shared-sample prediction comparisons.
+It should help users discover when categorization is unhelpful as readily as
+when it is useful.
+
+The distinction from `dlookr` is purpose and organization. Its broad exploration
+and transformation workflow includes useful binning functions. `binwise` is
+organized around evaluating whether categorization serves a stated analytical
+purpose, including what happens when the numeric predictor is retained in a
+flexible form. That distinction does not make the individual techniques new.
+
+This is a product and teaching contribution, not evidence that binning,
+interaction diagnostics, or held-out evaluation are new statistical methods.
+The individual techniques are established. Any claim of methodological novelty
+would need a specific new statistical contribution and a focused comparison.
+The distinct purpose of this workflow should be assessed on its own merits. Beginner
+usability testing and broader comparisons of the implemented alternatives
+would be useful next steps before a public release.
+
+## Reproducibility
+
+All three real datasets remain in R's `datasets` package; this guide does not
+redistribute separate copies. The code uses their documented versions and
+records the session below. The supplied simulated examples are described in
+`?binwise_examples` and `?binwise_interaction`.
+
+```{r session-info}
+sessionInfo()
+```
