@@ -9,3 +9,6 @@
 ^docs$
 ^LICENSE\.md$
 ^vignettes/articles$
+^pkgdown$
+^_pkgdown\.yml$
+^\.github$
