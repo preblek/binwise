@@ -1,0 +1,17 @@
+:root { --binwise-ink: #183538; --binwise-muted: #536569; --binwise-line: #dbe5e5; }
+body { font-size: 17px; line-height: 1.65; color: var(--binwise-ink); }
+.navbar { border-bottom: 1px solid var(--binwise-line); }
+.navbar-brand { font-weight: 750; letter-spacing: -.03em; }
+h1, h2, h3 { letter-spacing: -.025em; }
+h1 { font-weight: 750; }
+.binwise-kicker { font-size: .875rem; letter-spacing: .12em; font-weight: 700; color: #126b68; margin-top: 1.5rem; }
+.binwise-lead { font-size: clamp(1.25rem, 2.5vw, 1.65rem); line-height: 1.45; max-width: 46rem; }
+.binwise-actions { display: flex; flex-wrap: wrap; gap: .65rem; margin: 1.5rem 0; }
+.binwise-actions .btn { font-size: 1rem; padding: .65rem 1rem; }
+.binwise-hero { margin: 2rem 0; }
+.binwise-hero img { width: 100%; height: auto; border: 1px solid var(--binwise-line); border-radius: 6px; }
+figcaption, .binwise-note { font-size: .9rem; color: var(--binwise-muted); line-height: 1.55; margin-top: .6rem; }
+.binwise-takeaway { border-left: 4px solid #126b68; padding: .75rem 1.1rem; background: #f1f7f7; margin: 1.3rem 0; }
+a:focus-visible, button:focus-visible { outline: 3px solid #c77938; outline-offset: 3px; }
+pre { font-size: .875rem; }
+@media (max-width: 767px) { .binwise-actions .btn { width: 100%; } }

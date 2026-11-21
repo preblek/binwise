@@ -25,3 +25,4 @@ Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
 URL: https://preblek.github.io/binwise/, https://github.com/preblek/binwise
 BugReports: https://github.com/preblek/binwise/issues
+Config/Needs/website: pkgdown (>= 2.2.1), pkgload, pkgbuild, ragg, xml2

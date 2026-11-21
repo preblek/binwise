@@ -1,0 +1,56 @@
+url: https://preblek.github.io/binwise/
+destination: docs
+development:
+  mode: unreleased
+template:
+  bootstrap: 5
+  bslib:
+    primary: "#126b68"
+    link-color: "#126b68"
+    base_font: "-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    heading_font: "-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    code_font: "SFMono-Regular, Consolas, monospace"
+home:
+  title: Think through your bins before you use them
+  description: Explore what goes into each group, compare bins with continuous variables, and test how well the models predict new observations.
+navbar:
+  structure:
+    left: [tutorial, gallery, paper, guides, reference, news]
+    right: [search, github]
+  components:
+    tutorial:
+      text: Tutorial
+      href: articles/first-steps.html
+    gallery:
+      text: Examples
+      href: articles/example-gallery.html
+    paper:
+      text: Working paper
+      href: articles/working-paper.html
+    guides:
+      text: More guides
+      menu:
+      - text: The full getting-started guide
+        href: articles/getting-started.html
+      - text: Compare bins with curves
+        href: articles/flexible-continuous.html
+      - text: Real data and related packages
+        href: articles/real-data-and-related-work.html
+      - text: The paper case study in detail
+        href: articles/ii-case-study.html
+articles:
+- title: Start here
+  contents: [articles/first-steps, articles/example-gallery, articles/working-paper]
+- title: Work through the details
+  contents: [getting-started, flexible-continuous, real-data-and-related-work, ii-case-study]
+reference:
+- title: Examine and choose groups
+  desc: Inspect the values and counts, compare choices, and add the categories to your data.
+  contents: [bin_diagnose, bin_compare, bin_apply]
+- title: Compare models and predictions
+  desc: Compare categories with numeric predictors, including curves, then test predictions on observations left out of model fitting.
+  contents: [bin_interact, bin_validate]
+- title: Display and inspect results
+  contents: [plot.bin_diagnosis, plot.bin_comparison, plot.bin_interaction, predict.bin_interaction, plot.bin_validation, print.bin_validation]
+- title: Example data
+  contents: [binwise_examples, binwise_interaction, ii_case_study]
