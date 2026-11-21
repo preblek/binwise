@@ -9,7 +9,7 @@
 
 <figure class="binwise-hero">
 <a href="articles/example-gallery.html"><picture><source media="(max-width: 600px)" srcset="images/home-comparison-mobile.png"><img src="images/home-comparison.png" alt="Two simulated examples. In the first, four flat groups lose a steady increase. In the second, two groups follow a known jump at zero." width="1440" height="650"></picture></a>
-<figcaption>Two examples with different answers. In the first example, grouping hides a steady change. In the second, the simulated outcome really does jump at the chosen boundary. Other predictors are fixed at zero for the second example. These pictures are a starting point; the examples also show how to check predictions.</figcaption>
+<figcaption>Two examples that give very different answers. In the first example, grouping hides a steady change. In the second, the simulated outcome really does jump at the chosen boundary. Other predictors are fixed at zero for the second example. These pictures are a starting point, and the examples also show how to check predictions.</figcaption>
 </figure>
 
 ## Why binwise?
