@@ -2,7 +2,7 @@
 
 <div class="binwise-intro">
 <p class="binwise-kicker">THE BINWISE R PACKAGE</p>
-<p class="binwise-lead">Should you keep a variable as numbers, or put those numbers into groups? binwise helps you see what changes when you make that choice.</p>
+<p class="binwise-lead">Should you keep a variable as continuous, or put those numbers into groups or bins? binwise helps you see what changes when you make that choice.</p>
 <p>You might want to separate no participation from some participation, distinguish declines from increases, or describe combinations of trade relationships. Groups can make those differences easier to explain. They can also hide differences that matter.</p>
 <p class="binwise-actions"><a class="btn btn-primary" href="articles/first-steps.html">Start the tutorial</a> <a class="btn btn-outline-primary" href="articles/example-gallery.html">Explore the examples</a></p>
 </div>
@@ -11,6 +11,12 @@
 <a href="articles/example-gallery.html"><picture><source media="(max-width: 600px)" srcset="images/home-comparison-mobile.png"><img src="images/home-comparison.png" alt="Two simulated examples. In the first, four flat groups lose a steady increase. In the second, two groups follow a known jump at zero." width="1440" height="650"></picture></a>
 <figcaption>Two examples with different answers. In the first example, grouping hides a steady change. In the second, the simulated outcome really does jump at the chosen boundary. Other predictors are fixed at zero for the second example. These pictures are a starting point; the examples also show how to check predictions.</figcaption>
 </figure>
+
+## Why binwise?
+
+I created binwise because I was struggling with a paper I was writing where a lot of the dependent variable was occurring in a very small, narrow band of several of my independent variables. The distribution was really bunched, and I experimented with a lot of different methods to unpack some of that compression so I could better see the differences and variation. I am not sure that the package will be very useful, but I found it useful to solve my problem, so maybe others will find it helpful, also. 
+
+My working paper, [*Commercial Embeddedness and Sanctions Busting: Intra-Industry Trade, Dependence, and Economic Asymmetry*](https://doi.org/10.33774/apsa-2026-7wxvk), examines trade relationships involving countries under sanctions. It is available on APSA Preprints. The [paper case study](articles/working-paper.html) shows why categories can be useful for describing combinations of variables. It also explains what I learned from additional prediction checks prepared for binwise. Categories help organize the patterns and help to develop a model (or models) that keeps (or keep) the numbers while also allowing the curves to better predict.
 
 ## What can you do with binwise?
 
@@ -56,9 +62,7 @@ This example puts zero in its own category and divides positive values into thre
 
 ## The working paper behind the case study
 
-My working paper, [*Commercial Embeddedness and Sanctions Busting: Intra-Industry Trade, Dependence, and Economic Asymmetry*](https://doi.org/10.33774/apsa-2026-7wxvk), examines trade relationships involving countries under sanctions. It is available on APSA Preprints.
-
-The [paper case study](articles/working-paper.html) shows why categories can be useful for describing combinations of variables. It also explains what we learned from additional prediction checks prepared for binwise. Categories help organize the patterns; a model that keeps the numbers and allows curves predicts better in those checks. Both findings matter when deciding how to use bins.
+My working paper, [*Commercial Embeddedness and Sanctions Busting: Intra-Industry Trade, Dependence, and Economic Asymmetry*](https://doi.org/10.33774/apsa-2026-7wxvk), examines trade relationships involving countries under sanctions. It is available on APSA Preprints. The [paper case study](articles/working-paper.html) shows why categories can be useful for describing combinations of variables. 
 
 ## A tool for making the choice yourself
 
