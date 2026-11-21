@@ -1,0 +1,206 @@
+---
+title: "Examples to help you decide"
+---
+
+```{r setup, include=FALSE}
+library(binwise)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 8, fig.height = 5,
+                     out.width = "100%", dpi = 120)
+options(width = 80, digits = 4)
+```
+
+There is no single answer to whether a variable should be binned. These
+examples show why. Each uses data included with binwise, so you can run it
+without finding or preparing another dataset.
+
+Read the explanation before the code, then compare your output with the plot.
+The conclusions apply to these examples. They are questions to bring to your
+own data, rather than rules that automatically choose bins for you.
+
+[Download the R code for these examples](../examples/gallery.R).
+
+## Zero can describe a different situation
+
+In this fictional participation measure, zero means no participation.
+Positive values describe how much someone participates. A separate zero
+category preserves that distinction.
+
+```{r meaningful-zero}
+data("binwise_zero", package = "binwise")
+zero_groups <- bin_diagnose(
+  binwise_zero, "score", bins = 3, separate_zero = TRUE, warn = FALSE
+)
+zero_groups$bins[, c("bin", "lower", "upper", "n")]
+```
+
+**What to take from this.** Zero has meaning here because of how the variable
+is defined. A large pile of zeros in another dataset may have a different
+explanation. Even here, the positive scores do not automatically need bins.
+[Work through this example step by step](first-steps.html).
+
+## Equal counts can hide a wide range
+
+This simulated trade-like share contains many small values and a few much
+larger ones. Four groups with similar counts put a wide range of values in
+the last group. Adding boundaries among the largest observations makes that
+range easier to inspect.
+
+```{r long-tail}
+data("binwise_tail", package = "binwise")
+tail_choices <- bin_compare(
+  binwise_tail, "share", methods = "quantile",
+  custom_breaks = list(more_detail = as.numeric(quantile(
+    binwise_tail$share, c(0, .5, .75, .9, .95, .99, 1)
+  )))
+)
+plot(
+  tail_choices, type = "boundaries", show_counts = TRUE,
+  value_format = "percent", xlab = "Share",
+  main = "Similar counts can hide very different values",
+  scheme_labels = c(quantile_4 = "Four groups", more_detail = "More detail at the top")
+)
+```
+
+**What to take from this.** Look at ranges and counts together. Adding groups
+can reveal differences among large values, but it also leaves fewer observations
+in each group. A long tail is a reason to inspect your choices, not a reason
+that the variable must be binned.
+
+## Groups can hide a steady change
+
+In this example, the outcome rises steadily with exposure. We know that because
+we wrote the rule used to simulate the data. Four categories turn that steady
+increase into four flat steps.
+
+```{r smooth-change}
+data("binwise_smooth", package = "binwise")
+four_groups <- bin_diagnose(binwise_smooth, "exposure", bins = 4)
+smooth_fit <- bin_interact(
+  binwise_smooth, outcome = "outcome", variables = "exposure",
+  schemes = list(four_groups = four_groups)
+)
+plot(smooth_fit, xlab = "Exposure", main = "Grouping hides change within each interval")
+```
+
+The `continuous` line uses the original numbers. `four_groups` uses the
+categories. The shaded areas are 95% confidence intervals for the estimated
+mean outcome, not ranges containing 95% of individual outcomes.
+
+**What to take from this.** If the amount of exposure matters, these groups
+throw away useful differences. The fact that a flat step crosses the line
+near the middle of a group is not evidence that binning is appropriate.
+
+## A curve is also worth comparing
+
+A straight line can miss a relationship that bends. In this version of the
+example, outcomes are higher at both ends of the exposure range. We keep the
+same simulated noise and change the rule for the mean outcome.
+
+```{r curved-change}
+curved <- binwise_smooth
+noise <- curved$outcome - curved$expected_outcome
+curved$outcome <- 2 + .008 * (curved$exposure - 50)^2 + noise
+curve_groups <- bin_diagnose(curved, "exposure", bins = 4)
+curve_fit <- bin_interact(
+  curved, outcome = "outcome", variables = "exposure",
+  schemes = list(four_groups = curve_groups), spline_df = 3
+)
+plot(curve_fit, xlab = "Exposure", main = "Give the numeric model room to bend")
+```
+
+The `spline` model fits a smooth curve while keeping exposure as numbers.
+`spline_df = 3` sets how much flexibility that curve has. It is a choice to
+check, rather than a setting that is best for every dataset.
+
+**What to take from this.** Categories can improve on a straight line simply
+because the line has the wrong shape. Compare the groups with a curve too.
+The [curve comparison guide](flexible-continuous.html) also checks predictions
+for observations left out of fitting.
+
+## A known jump can make groups useful
+
+Here the simulated mean outcome jumps at zero. Within each side, further
+changes in `x` do not change that mean when the other predictors are fixed.
+This gives us a reason to try two groups before looking at prediction scores.
+
+The example also includes `z`. The size of the jump changes with `z`, which is
+what an interaction represents. Another variable, `control`, is included in
+each model so the comparison uses the same additional information.
+
+```{r known-jump, fig.height=5.5}
+data("binwise_interaction", package = "binwise")
+jump_groups <- bin_diagnose(
+  binwise_interaction, "x", method = "custom",
+  breaks = c(min(binwise_interaction$x), 0, max(binwise_interaction$x))
+)
+jump_fit <- bin_interact(
+  binwise_interaction, outcome = "threshold_outcome",
+  variables = c("x", "z"), controls = "control",
+  schemes = list(two_groups = jump_groups)
+)
+plot(jump_fit, xlab = "Distance from the boundary",
+     main = "Two groups can represent a known jump")
+```
+
+Each panel holds `z` at a different value. The straight-line model spreads
+change across `x`. The grouped model can represent the jump.
+
+Now compare predictions on observations left out of model fitting. The code
+divides the data into five parts, fits each model using four parts, and predicts
+the part left out. It repeats this until every observation has a prediction
+from a model that was fitted without it.
+
+```{r test-the-jump}
+jump_check <- bin_validate(
+  binwise_interaction, outcome = "threshold_outcome",
+  variables = c("x", "z"), controls = "control",
+  schemes = list(two_groups = list(x = list(breaks = c(-Inf, 0, Inf)))),
+  spline_df = 3, reference = "spline", folds = 5, seed = 12, reps = 199
+)
+jump_check$scores
+```
+
+Look at **RMSE**, a summary of prediction error in the outcome's units. Lower
+is better. In this example it is about 1.34 for the straight-line interaction,
+1.28 for the curve model, and 1.20 for the two groups.
+
+**What to take from this.** These bins have a known boundary, represent the
+simulated relationship, and predict better than both alternatives in this
+comparison. That is stronger evidence than looking at where fitted lines
+cross. In real research, a jump has to be justified by the setting and the
+evidence; this simulation does not establish a threshold in anyone else's data.
+
+## A boundary can matter even when nobody equals zero
+
+Here, negative changes are declines and positive changes are increases.
+There are no exact zeros. If direction is the question, two groups can be
+useful even though their counts differ.
+
+```{r direction}
+data("binwise_mixed", package = "binwise")
+direction_choices <- bin_compare(
+  binwise_mixed, "change", methods = "quantile",
+  custom_breaks = list(direction = c(min(binwise_mixed$change), 0,
+                                     max(binwise_mixed$change)))
+)
+plot(
+  direction_choices, type = "boundaries", show_counts = TRUE,
+  xlab = "Change", main = "Keep declines and increases separate",
+  scheme_labels = c(quantile_4 = "Four groups", direction = "Boundary at zero")
+)
+```
+
+**What to take from this.** Similar group sizes are not always the goal.
+If direction matters, the boundary at zero preserves it. If the amount of
+change matters too, two groups still hide information. With the package's
+interval rule, a future exact zero would join the lower group.
+
+## Bring the questions back to your data
+
+What does each boundary mean? What differences disappear within a group?
+Are there enough observations to make the comparison you want? If prediction
+matters, do the groups help when tested on observations left out of fitting?
+
+The [working-paper example](working-paper.html) brings these questions to
+real trade and sanctions data. For datasets supplied with R and a guide to
+related packages, see [real data and related work](real-data-and-related-work.html).

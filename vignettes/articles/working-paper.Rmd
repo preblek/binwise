@@ -1,0 +1,104 @@
+---
+title: "Trade, sanctions, and a reason to consider groups"
+---
+
+```{r setup, include=FALSE}
+library(binwise)
+case <- readRDS(system.file("extdata", "ii-case-study.rds", package = "binwise"))
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 9,
+                     fig.height = 4.8, out.width = "100%", dpi = 120)
+```
+
+My working paper, [*Commercial Embeddedness and Sanctions Busting:
+Intra-Industry Trade, Dependence, and Economic Asymmetry*](https://doi.org/10.33774/apsa-2026-7wxvk),
+is available on APSA Preprints. It studies trade between third-party countries
+and countries under sanctions.
+
+The paper asks how three features of a trading relationship fit together.
+Do the countries trade within the same industries? How dependent is the third
+party on trade with the sanctioned country? Are the two economies similar in
+size, or very different?
+
+These are also useful questions for binwise. Categories can help us describe
+combinations that would be difficult to follow by looking at one variable at
+a time. We can then ask a separate question about how well models using those
+categories predict outcomes.
+
+## What the categories mean
+
+- **Intra-industry trade (IIT).** The paper separates zero IIT from positive
+  IIT, then divides positive IIT into lower and higher groups. Zero means no
+  measured intra-industry component, not no trade relationship.
+- **Trade dependence.** The paper groups the target's share of the third
+  party's trade using the 50th, 75th, and 90th percentiles. This gives more
+  detail among the most dependent relationships.
+- **Economic size.** The paper separates more similar economies, moderately
+  different economies, and highly asymmetric economies using the difference
+  in their logged GDP values.
+
+The percentile boundaries describe this sample. They are not established
+points at which economies suddenly start behaving differently.
+
+## Why grouping helps show the pattern
+
+Consider relationships in the higher positive-IIT group. Among similarly
+sized economies, the observed rate of sanctions busting rises sharply across
+the dependence categories. Among highly asymmetric economies, the rate is
+much lower in the two highest dependence categories.
+
+The [full case study](ii-case-study.html) shows the heatmaps, explains each
+square, and includes the observation counts. One square records a 70.7% rate
+among similar economies with higher positive IIT and the highest dependence.
+That means 3,469 of the 4,909 observations in that combination are coded as
+sanctions busting. It does not mean that this group accounts for 70.7% of all
+sanctions busting.
+
+**The benefit of grouping here is that the combinations are easier to describe
+and compare.** A useful descriptive grouping does not automatically make the
+best prediction model.
+
+## What the additional prediction checks show
+
+For binwise, we also compared models on observations left out of fitting.
+These checks were prepared for the package case study and should not be read
+as additional results reported in the working paper.
+
+All three models predict the same outcome for the same test observations.
+Observations involving the same unordered country pair stay together when
+the data are divided into training and test groups.
+
+| Model | Brier score |
+| --- | ---: |
+| Original numbers with a linear interaction | 0.0480 |
+| Categories | 0.0420 |
+| Original numbers with flexible curves and interactions | 0.0363 |
+
+A **Brier score** measures the average squared difference between a predicted
+probability and the observed outcome, coded zero or one. Smaller values mean
+more accurate probability predictions by this measure.
+
+The categories improve on the linear comparison here. The flexible model
+improves further. Its specification was written for this paper's analysis;
+it is not identical to adding `spline_df = 3` to a basic binwise call.
+
+These results do not undo the descriptive value of the categories. They show
+why we should distinguish making a pattern easier to discuss from choosing
+the model that predicts most accurately. Neither comparison, by itself,
+establishes a causal effect.
+
+## Follow the analysis
+
+[Open the full paper case study](ii-case-study.html) for the category boundaries,
+heatmaps, confidence intervals, and prediction comparisons. That guide uses
+small summaries of the real data included with binwise. It recreates the
+figures from saved results; it does not rerun the original regressions.
+
+You can also [read the working paper](https://doi.org/10.33774/apsa-2026-7wxvk)
+for the research argument, definitions, and analysis.
+
+## Cite the working paper
+
+Preble, Keith. 2026. *Commercial Embeddedness and Sanctions Busting:
+Intra-Industry Trade, Dependence, and Economic Asymmetry*. APSA Preprints.
+Posted November 16, 2026.
+[https://doi.org/10.33774/apsa-2026-7wxvk](https://doi.org/10.33774/apsa-2026-7wxvk).

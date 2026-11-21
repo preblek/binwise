@@ -1,0 +1,15 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  articles/example-gallery: example-gallery.html
+  articles/first-steps: first-steps.html
+  flexible-continuous: flexible-continuous.html
+  getting-started: getting-started.html
+  ii-case-study: ii-case-study.html
+  real-data-and-related-work: real-data-and-related-work.html
+  articles/working-paper: working-paper.html
+last_built: 2026-11-21T13:41Z
+urls:
+  reference: https://preblek.github.io/binwise/reference
+  article: https://preblek.github.io/binwise/articles

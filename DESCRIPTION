@@ -23,3 +23,5 @@ Depends: R (>= 4.1.0)
 Imports: graphics, grDevices, splines, stats, utils
 Suggests: knitr, rmarkdown
 VignetteBuilder: knitr
+URL: https://preblek.github.io/binwise/, https://github.com/preblek/binwise
+BugReports: https://github.com/preblek/binwise/issues

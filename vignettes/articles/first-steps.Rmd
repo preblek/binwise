@@ -1,0 +1,163 @@
+---
+title: "Your first steps with binwise"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 8, fig.height = 5,
+                     out.width = "100%", dpi = 120)
+```
+
+Binning means putting numeric values into groups. Instead of using an exact
+score, for example, you might use "none", "low", and "high". That can make a
+comparison easier to explain. It also means treating different values within
+a group as the same category.
+
+This short tutorial walks through one example, from inspecting the groups to
+adding them to a dataset. You do not need to bring your own data.
+
+## Install the package
+
+Open RStudio and run these lines in the **Console**. You only need to install
+the package once, unless you want to update it.
+
+```{r install, eval=FALSE}
+install.packages("remotes")
+remotes::install_github("preblek/binwise")
+```
+
+binwise needs R 4.1 or later. It is not yet on CRAN, so
+`install.packages("binwise")` is not the installation command for this version.
+
+## Load an example
+
+Run the following code after installing. `library()` loads the package for
+this R session. `data()` loads a small example included with it.
+
+```{r load-example}
+library(binwise)
+data("binwise_zero", package = "binwise")
+head(binwise_zero)
+```
+
+The example describes a fictional participation score. A score of zero means
+no participation; positive scores describe how much someone participates.
+
+`head()` shows the first few rows. Each row is an observation, and `score` is
+the column we will group. The example has 1,000 observations in total.
+
+If you are new to RStudio, choose **File > New File > R Script** and copy the
+code blocks into that script. Select one block at a time and press
+**Command+Enter** on a Mac or **Ctrl+Enter** on Windows. Run the blocks in order.
+
+## Look at the proposed groups
+
+We will give zero its own category and divide the positive scores into three
+groups with roughly equal counts.
+
+```{r inspect-groups}
+groups <- bin_diagnose(
+  binwise_zero, "score", bins = 3,
+  separate_zero = TRUE, warn = FALSE
+)
+groups$bins
+```
+
+`<-` saves the result under the name `groups`. The quotation marks around
+`"score"` tell the function which column to use. `groups$bins` opens the table
+of categories inside that saved result.
+
+Read the table one row at a time. The lower and upper values describe a
+category's boundaries. `n` tells you how many observations it contains.
+There are 400 zeros, followed by three positive-score groups of 200 each.
+The `bins = 3` setting applies to the positive values, so there are four
+categories altogether.
+
+```{r count-check, include=FALSE}
+stopifnot(identical(as.integer(groups$bins$n), c(400L, 200L, 200L, 200L)))
+```
+
+Print the whole result to see the package's written assessment.
+
+```{r assessment}
+groups
+```
+
+The assessment points out features worth checking. It cannot tell you what
+zero means in your research. That interpretation comes from your question
+and your knowledge of the variable.
+
+## Compare another way of grouping the values
+
+Perhaps you would rather use intervals of the same width. Compare both choices
+before deciding.
+
+```{r compare-groups}
+choices <- bin_compare(
+  binwise_zero, "score", bins = 3,
+  methods = c("quantile", "equal_width"), separate_zero = TRUE
+)
+plot(
+  choices, type = "boundaries", show_counts = TRUE,
+  xlab = "Participation score", main = "What goes into each group?",
+  scheme_labels = c(quantile_3 = "Similar counts", equal_width_3 = "Equal widths")
+)
+```
+
+Each horizontal segment shows the range covered by a group. The counts tell
+you how many observations fall in it. Similar counts do not necessarily mean
+similar ranges. Equal widths do not necessarily mean similar counts.
+
+Use **Plots > Zoom** in RStudio if the labels look small. Orange marks identify
+groups that fall below the package's count or proportion screening rules.
+They are a prompt to look more closely, not an automatic rejection of the bins.
+
+## Add the chosen categories to your data
+
+Suppose you choose the groups from the first step. `bin_apply()` adds them as
+a new column and keeps the original score.
+
+```{r apply-groups}
+with_groups <- bin_apply(
+  binwise_zero, groups, name = "participation_group"
+)
+head(with_groups)
+table(with_groups$participation_group)
+```
+
+`binwise_zero` is unchanged. `with_groups` is a new data frame containing the
+original columns and `participation_group`. The groups use the exact boundaries
+saved in `groups`.
+
+## What should you conclude?
+
+Separating no participation from some participation has a clear meaning in
+this example. That is a reason to consider a separate zero category. It is
+not, by itself, a reason to turn all positive values into low, medium, and
+high groups.
+
+Ask what you want to compare. If the amount of participation matters, keeping
+the exact scores may be more useful. If you do choose groups, describe their
+boundaries and keep the original score available.
+
+## Where to go next
+
+The [example gallery](example-gallery.html) shows several different situations,
+including one where bins improve predictions and one where they hide a smooth
+relationship. The [longer tutorial](getting-started.html) walks through model
+comparisons and explains their output.
+
+For your own data, replace `binwise_zero` with your data frame and `"score"`
+with the name of your numeric column. You can also choose your own boundaries.
+For example, the code below would divide a score known to run from 0 to 100
+at 25, 50, and 75. Change both the data name and the boundaries for your setting.
+
+```{r own-boundaries, eval=FALSE}
+my_groups <- bin_diagnose(
+  my_data, "score", method = "custom",
+  breaks = c(0, 25, 50, 75, 100)
+)
+```
+
+Values at an interior boundary join the interval below it. For example, 25
+joins the first interval. The function help explains missing values and values
+outside your chosen range.
